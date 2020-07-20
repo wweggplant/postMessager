@@ -7,6 +7,7 @@ var fs = require( 'fs' )
 
 const devEnv = ['development','production'];
 const distName = `${pkg.name}.${pkg.version}`
+
 const cleanDistDir = mode => () => {
   return devEnv.includes(mode) ? del(['./dist']): undefined
 }
@@ -27,7 +28,7 @@ const rollupBuild = (entry,outDir,moduleName)  => {
       sourcemap: true
     })
   }).then(file =>{
-    fs.copyFile(`./dist/${distName}.js`,`tests/unit/front-end/build/${distName}.js`,function(err){
+    fs.copyFile(`./dist/${distName}.js`,`demo/js/${pkg.name}.js`,function(err){
       if(err) console.log('something wrong was happened')
       else console.log('copy file succeed');
     })

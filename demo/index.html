@@ -6,7 +6,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>postMessager demo</title>
+        <title>postMessage demo</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="">
@@ -15,7 +15,22 @@
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        
-        <script src="../dist/postMessager.iife.js" async defer></script>
+        <p>我是父级页面</p>
+        <div>
+            <input type="text" name="text"> <button>发送消息</button>
+
+        </div>
+        <iframe name="child" id="child" src="./child.html" frameborder="0"></iframe>
+        <script src="js/postMessager.js"></script>
+        <script>
+            var p = new PostMessager({
+                id: 'parent',
+                origin: ''
+            });
+            const $text = document.querySelector('[name=text]');
+            document.querySelector('button').addEventListener('click',function() {
+                p.send('child', { text:  $text.value }, { otherWindow: document.querySelector('iframe').contentWindow })
+            })
+        </script>
     </body>
 </html>
