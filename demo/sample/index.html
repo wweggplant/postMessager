@@ -6,7 +6,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>parent</title>
+        <title>postMessage demo</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="">
@@ -15,16 +15,26 @@
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <h4>以下是iframe child得到的消息</h4>
-        <p></p>
-        <script src="js/postMessager.js"></script>
+        <h4>我是父级页面</h4>
+        <div>
+            <input type="text" name="text"> <button>发送消息</button>
+            <h4>来自chilren的消息</h4>
+            <p></p>
+        </div>
+        <iframe name="child" id="child" src="./child.html" frameborder="0"></iframe>
+        <script src="../js/postMessager.iife.js"></script>
         <script>
-            let child = new PostMessager({
-                id: 'child'
+            var p = new PostMessager({
+                id: 'parent',
+                target: document.querySelector('iframe').contentWindow
             });
-            child.on('receive', function(content, event) {
+            const $text = document.querySelector('[name=text]');
+            document.querySelector('button').addEventListener('click',function() {
+                p.send('child', { text:  $text.value })
+            })
+            p.on('receive', function(content, event) {
                 document.querySelector('p').innerText = content.text
-            }, '*')
+            })
         </script>
     </body>
 </html>

@@ -11,11 +11,11 @@
     "type-check:watch": "npm run type-check -- --watch",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "rollup -c scripts/rollup.config.js",
-    "build": "npm run  build:types && npm run build:js"
+    "build": "gulp default && npm run build:types"
   },
-  "main": "dist/postMessager.cjs.js",
-  "module": "dist/postMessager.esm.js",
-  "browser": "dist/postMessager.iife.js",
+  "main": "postMessager.js",
+  "module": "postMessager.es.js",
+  "browser": "postMessager.iife.js",
   "types": "dist/types/index.d.ts",
   "devDependencies": {},
   "dependencies": {

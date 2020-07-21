@@ -15,22 +15,10 @@
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <p>我是父级页面</p>
-        <div>
-            <input type="text" name="text"> <button>发送消息</button>
-
-        </div>
-        <iframe name="child" id="child" src="./child.html" frameborder="0"></iframe>
-        <script src="js/postMessager.js"></script>
-        <script>
-            var p = new PostMessager({
-                id: 'parent',
-                origin: ''
-            });
-            const $text = document.querySelector('[name=text]');
-            document.querySelector('button').addEventListener('click',function() {
-                p.send('child', { text:  $text.value }, { otherWindow: document.querySelector('iframe').contentWindow })
-            })
-        </script>
+        <h4>监听事件demo</h4>
+        <h4>我是 iframe child1</h4>
+        <iframe name="child1" id="child" src="./child1.html" frameborder="0"></iframe>
+        <h4>我是 iframe child2</h4>
+        <iframe name="child2" id="child" src="./child2.html" frameborder="0"></iframe>
     </body>
 </html>

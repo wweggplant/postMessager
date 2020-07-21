@@ -1,9 +1,11 @@
-import { resolveOrigin, postMessage, SupportPostMessage, generateMessageId, devLog, log, warn } from './util'
+import { resolveOrigin, postMessage, SupportPostMessage, generateMessageId, devLog, warn } from './util'
 
 interface PostMessagerConfig{ 
   host: Window;
+  target: Window;
   origin: string;
   id: string; //唯一标识
+  targetId: string; //唯一标识
 }
 
 interface Message{
@@ -12,6 +14,7 @@ interface Message{
   toStr: string;
   eventName: string; // 事件类型
   id: number;
+  event?: MessageEvent;
 } 
 interface listenersMap {
   [prop: string]: listenerObject;
@@ -21,29 +24,37 @@ interface listenerObject {
 }
 interface sendConfig {
   origin: string;
-  otherWindow?: Window
 }
-const checkBuiltEvent = function(event: string): boolean {
+/* const checkBuiltEvent = function(event: string): boolean {
   return ['receive'].indexOf(event) > -1
-}
+} */
 const checkOriginEq = function (origin:string, targetOrigin: string) {
   return resolveOrigin(origin) === resolveOrigin(targetOrigin)
 }
 export class PostMessager{
   private host: Window = window
+  private target: Window | null = null
   private origin: string = ''
   public id: string = '' // 标识
-  private listenersMap!: listenersMap
+  public targetId: string = '' // 标识
+  private listenersMap: listenersMap = {
+    receive: {
+      listeners: []
+    }
+  }
   constructor(config: PostMessagerConfig) {
     if(!SupportPostMessage(window)) {
-      log('您的浏览器不支持postMessage')
+      warn('您的浏览器不支持postMessage')
       return;
     }
     if (!config.id) {
-      log('请输入name属性作为标识')
+      warn('请输入name属性作为标识')
+      return
     }
     this.id = config.id
     this.host = config.host || window
+    this.target = config.target
+    this.targetId = config.targetId
     this.origin = config.origin || resolveOrigin()
     // 绑定事件
     this.initListener();
@@ -55,16 +66,11 @@ export class PostMessager{
   }
   private initListener() {
     // 初始化事件绑定
-    this.listenersMap = {
-      receive: {
-        listeners: []
-      }
-    }
     const listenersHandler = (event: MessageEvent) => {
         if (!checkOriginEq(this.origin, event.origin))
             return;
         // 触发事件
-        const { toStr, eventName, content, globalMap} = event.data
+        const { toStr, eventName, content} = event.data
         // 验证id或者to属性
         if (toStr === this.id) {
           this._emit(eventName, content, event)
@@ -76,6 +82,10 @@ export class PostMessager{
     本质上,send方法就是出发一次once事件
   */
   send(id: string, message: any, config?: sendConfig) {
+    if (!this.target) {
+      warn('缺少target参数')
+      return
+    }
     let orgin = config?.origin || '*'
     const _message: Message = {
       content: message,
@@ -84,12 +94,13 @@ export class PostMessager{
       fromStr: this.id,
       id: generateMessageId()
     }
-    postMessage(config?.otherWindow || this.host, _message, orgin)
+    postMessage(<Window>(this.target), _message, orgin)
   }
   on(eventName:string, listener: Function) {
-    const evtObj = this.listenersMap[eventName]
+    let evtObj = this.listenersMap[eventName]
     if (!evtObj) {
         PostMessager.createListenerObject(this.listenersMap, eventName)
+        evtObj = this.listenersMap[eventName]
     }
 
     if (listener) {
@@ -114,8 +125,20 @@ export class PostMessager{
     }
     this.on(eventName, cb)
   }
-  emit(eventName:string, data: any, event: MessageEvent) {
-    this._emit(eventName, data, event)
+  targetEmit(eventName:string, data: any, event: MessageEvent) {
+    if (!this.target) {
+      warn('缺少target参数')
+      return
+    }
+    const _message: Message = {
+      content: data,
+      toStr: this.targetId,
+      eventName: eventName,
+      fromStr: this.id,
+      event,
+      id: generateMessageId()
+    }
+    postMessage(<Window>(this.target), _message, this.origin || '*')
   }
   private _emit(eventName:string, data: any, event: MessageEvent) {
     const evtObj = this.listenersMap[eventName]
