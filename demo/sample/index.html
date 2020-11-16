@@ -67,8 +67,7 @@
                 <a-col>来自iframe B的消息</a-col>
             </a-row>
             <a-textarea readonly type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
-            <hr>
-            <iframe name="child" id="child" src="./child.html" frameborder="0" style="width: 100%;height: 500px"></iframe>
+            <iframe name="child" id="child" src="./child.html" frameborder="0" style="width: 100%;height: 330px;margin-top: 20px;border: 1px solid #191818;padding: 5px 10px"></iframe>
             <hr>
             <h2>窗口之间通讯</h2>
             <a-row :gutter="10">
