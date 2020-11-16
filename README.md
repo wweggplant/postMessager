@@ -2,6 +2,9 @@
 
 A support window, and iframe label page before communication library. Based on the postMessage. Use the typescript.
 
+[online demo](http://wangjojo.gitee.io/postmessager/sample/)
+
+
 
 # usage
 
