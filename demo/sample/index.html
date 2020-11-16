@@ -9,32 +9,70 @@
         <title>postMessage demo</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="">
+        <link href="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.css" rel="stylesheet">
+        <style>
+            #app{
+              padding: 20px;
+            }
+        </style>
     </head>
     <body>
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <h4>我是父级页面</h4>
-        <div>
-            <input type="text" name="text"> <button>发送消息</button>
-            <h4>来自chilren的消息</h4>
-            <p></p>
+        <div id="app">
+            <h2>跨iframe通讯demo</h2>
+            <h3>iframe A</h3>
+            <a-form layout="inline" :model="form" @submit="send" @submit.native.prevent>
+                <a-row>
+                    <a-col>
+                        <a-form-item label="普通消息">
+                            <a-input v-model:value="form.message" placeholder="请输入给iframe B发送的消息"></a-input>
+                        </a-form-item>
+                        <a-form-item>
+                            <a-button
+                                type="primary"
+                                html-type="submit"
+                                :disabled="form.message === ''"
+                            >
+                                发送
+                            </a-button>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row>
+                    <a-col>
+                        <a-form-item label="传送数据">
+                            <a-radio-group v-model:value="form.data" button-style="solid">
+                                <a-radio-button value="0">
+                                    对象:{ name: 'foo', age: 11}
+                                </a-radio-button>
+                                <a-radio-button value="1">
+                                    数组:[{ name: 'foo', age: 11}, { name: 'foo2', age: 12}]
+                                </a-radio-button>
+                            </a-radio-group>
+                        </a-form-item>
+                        <a-form-item>
+                            <a-button
+                                type="primary"
+                                html-type="submit"
+                            >
+                                发送
+                            </a-button>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </a-form>
+            <a-row>
+                <a-col>来自iframe B的消息</a-col>
+            </a-row>
+            <a-textarea type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
         </div>
-        <iframe name="child" id="child" src="./child.html" frameborder="0"></iframe>
-        <script src="../js/postMessager.iife.js"></script>
-        <script>
-            var p = new PostMessager({
-                id: 'parent',
-                target: document.querySelector('iframe').contentWindow
-            });
-            const $text = document.querySelector('[name=text]');
-            document.querySelector('button').addEventListener('click',function() {
-                p.send('child', { text:  $text.value })
-            })
-            p.on('receive', function(content, event) {
-                document.querySelector('p').innerText = content.text
-            })
-        </script>
+        <hr>
+        <iframe name="child" id="child" src="./child.html" frameborder="0" style="width: 100%;height: 500px"></iframe>
+        <script defer src="../js/postMessager.iife.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/vue/3.0.2/vue.global.prod.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.js"></script>
+        <script defer src="../js/main.js"></script>
     </body>
 </html>

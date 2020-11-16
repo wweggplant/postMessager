@@ -9,30 +9,46 @@
         <title>parent</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="">
+        <link href="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.css" rel="stylesheet">
+        <style>
+          #app{
+            padding: 20px;
+          }
+        </style>
     </head>
     <body>
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <h4>来自parent的消息</h4>
-        <p></p>
-        <div>
-            <input type="text" name="text" > <button>发送</button>
+        <div id="app">
+            <h3>iframe B</h3>
+            <a-form layout="inline" :model="form" @submit="send" @submit.native.prevent>
+                <a-row>
+                    <a-col>
+                        <a-form-item label="普通消息">
+                            <a-input v-model:value="form.message" placeholder="请输入给iframe B发送的消息"></a-input>
+                        </a-form-item>
+                        <a-form-item>
+                            <a-button
+                                    type="primary"
+                                    html-type="submit"
+                                    :disabled="form.message === ''"
+                            >
+                                发送
+                            </a-button>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </a-form>
+            <a-row>
+                <a-col>来自iframe A的消息</a-col>
+            </a-row>
+            <a-textarea placeholder="基本类型" type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
+            <a-textarea placeholder="对象类型" type="textarea" v-model:value="dataFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
         </div>
-        <script src="../js/postMessager.iife.js"></script>
-        <script>
-            let child = new PostMessager({
-                id: 'child',
-                target: parent
-            });
-            child.on('receive', function(content, event) {
-                document.querySelector('p').innerText = content.text
-            })
-            const $text = document.querySelector('[name=text]');
-            document.querySelector('button').addEventListener('click', function() {
-                child.send('parent', { text:  $text.value })
-            })
-        </script>
+        <script defer src="../js/postMessager.iife.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/vue/3.0.2/vue.global.prod.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.js"></script>
+        <script defer src="../js/child.js"></script>
     </body>
 </html>
