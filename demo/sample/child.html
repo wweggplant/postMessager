@@ -9,12 +9,7 @@
         <title>parent</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.css" rel="stylesheet">
-        <style>
-          #app{
-            padding: 20px;
-          }
-        </style>
+        <link href="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-rc.1/antd.min.css" rel="stylesheet">
     </head>
     <body>
         <!--[if lt IE 7]>
@@ -43,12 +38,12 @@
             <a-row>
                 <a-col>来自iframe A的消息</a-col>
             </a-row>
-            <a-textarea placeholder="基本类型" type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
-            <a-textarea placeholder="对象类型" type="textarea" v-model:value="dataFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
+            <a-textarea readonly placeholder="基本类型" type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
+            <a-textarea readonly style="margin-top:10px" placeholder="对象类型" type="textarea" v-model:value="dataFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
         </div>
         <script defer src="../js/postMessager.iife.js"></script>
         <script defer src="https://cdn.bootcdn.net/ajax/libs/vue/3.0.2/vue.global.prod.js"></script>
-        <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-beta.11/antd.min.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-rc.1/antd.min.js"></script>
         <script defer src="../js/child.js"></script>
     </body>
 </html>
