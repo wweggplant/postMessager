@@ -5,14 +5,14 @@ export interface PostMessagerConfig{
   id: string; //唯一标识
   targetId: string; //唯一标识
 }
-export interface Message{
-  content: any;
-  fromStr: string;
-  toStr: string;
-  eventName: string; // 事件类型
-  id: number;
-  event?: MessageEvent;
-} 
+// export interface Message{
+//   content: any;
+//   fromStr: string;
+//   toStr: string;
+//   eventName: string; // 事件类型
+//   id: number;
+//   event?: MessageEvent;
+// } 
 export interface listenersMap {
   [prop: string]: listenerObject;
 }

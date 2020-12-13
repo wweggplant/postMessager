@@ -1,3 +1,5 @@
+// import { Message } from "./type"
+/// <reference path="index.d.ts" />
 let _messageId = 0
 export const messageType = 'application/x-postmessager+json'
 
@@ -17,7 +19,7 @@ export const devLog = function(message: string, name: string = 'default'){
  * @param  {String} url The full URL being requested
  * @return {String}     The URLs origin
  */
-export const resolveOrigin = (url: string = '') => {
+export const resolveOrigin = (url: string = ''): string => {
   const a = document.createElement('a')
   a.href = url
   const protocol = a.protocol.length > 4 ? a.protocol : window.location.protocol
@@ -32,7 +34,7 @@ export const SupportPostMessage = function (win: Window) {
 /* 
   可以参考: https://developer.mozilla.org/zh-CN/docs/Web/API/Window/postMessage
 */
-export const postMessage = function (win: Window, data: any, targetOrigin: string = '') {
+export const postMessage = function (win: Window, data: Message, targetOrigin: string = '') {
   if (SupportPostMessage(win)) {
     win.postMessage(data, targetOrigin)
   } else {

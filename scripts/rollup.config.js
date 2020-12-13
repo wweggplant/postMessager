@@ -7,7 +7,7 @@ const extensions = [
   '.js', '.jsx', '.ts', '.tsx',
 ];
 
-const name = 'RollupTypeScriptBabel';
+const name = 'MessageClient';
 
 export default {
   input: 'src/index.ts',
