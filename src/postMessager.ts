@@ -7,8 +7,8 @@ interface Options {
 }
 type getTarget =  () => container
 enum MessageType {
-  handshake,
-  handshakeReply,
+  heartbeat,
+  heartbeatReply,
   reply,
   request
 }
@@ -36,7 +36,8 @@ class Session {
   private connetCount: number = 0
   private status: SessionStatus = SessionStatus.init;
   private messageFun?: (event: MessageEvent) => void | undefined
-  private interval: number = 0
+  private interval: number = 0;
+  private sendData: (data: Message) => void 
   private eventHubMap: Record<string, EventHub<any>> | undefined = {}
   constructor(clientId: ClientId, origin: container, getTarget: getTarget, domain: string) {
     this.id = IDgenerator('Session')
@@ -44,6 +45,10 @@ class Session {
     this.getTarget = getTarget
     this.clientId = clientId
     this.domain = domain
+    this.sendData = (message) => {
+      const target = this.checkAndGetTarget()
+      postMessage(target, message, this.domain)
+    }
     const target = this.checkAndGetTarget()
     if (target) {
       target.addEventListener('load', () => {
@@ -70,8 +75,7 @@ class Session {
   private doHeartbeatDetect() {
     const maxTime = 500
     this.interval = window.setInterval(() => {
-      const target = this.checkAndGetTarget()
-      this.doOneHeartbeat(target)
+      this.doOneHeartbeat()
       if (this.connetCount > CONNECT_MAX_COUNT) {
         this.status = SessionStatus.close
         console.warn('连接失败')
@@ -84,19 +88,19 @@ class Session {
   /* 
     执行一次心跳操作, 创建一个新的Promise对象
   */
-  private doOneHeartbeat(target: MessageClientTarget): Promise<SessionStatus>{
+  private doOneHeartbeat(): Promise<SessionStatus>{
     // 发起握手请求
     return new Promise<SessionStatus>((resolve, reject) => {
         if (this.status === SessionStatus.close) {
           reject('连接失败')
           return
         }
-        postMessage(target, {
+        this.sendData({
           clientId: this.clientId,
           data: {},
-          type: MessageType.handshake,
+          type: MessageType.heartbeat,
           sessionId: this.id
-        }, this.domain)
+        })
         if (this.messageFun) {
           this.origin.removeEventListener('message', this.messageFun)
         }
@@ -104,7 +108,7 @@ class Session {
         this.messageFun = (event: MessageEvent) => {
           const message: Message = event.data
           // 校验回复类型和id, id就可以区别 
-          if (message.type === MessageType.handshakeReply && message.sessionId === this.id) {
+          if (message.type === MessageType.heartbeatReply && message.sessionId === this.id) {
             if ((<HandshakeReply>message.data).result === true) {
               // session建立成功
               if (this.status !== SessionStatus.keep) {
@@ -123,17 +127,16 @@ class Session {
     this.eventHubMap = undefined
   }
   send(data: Data) {
-    const target = this.checkAndGetTarget()
     const sendMessge = () => {
-      postMessage(target, {
+      this.sendData({
         clientId: this.clientId,
         data,
         type: MessageType.request,
         sessionId: this.id
-      }, this.domain)
+      })
     }
     this.status = SessionStatus.init
-    this.doOneHeartbeat(target).then(() => {
+    this.doOneHeartbeat().then(() => {
       // 连接恢复,重新建立心跳探测
       this.doHeartbeatDetect()
       sendMessge()
@@ -157,14 +160,14 @@ export default class MessageClient {
     return new Session(this.id, this.container, getTarget, this.domain)
   }
   // 响应,自动调用
-  handshakeReply(message: Message, source: MessageEventSource) {
+  heartbeatReply(message: Message, source: MessageEventSource) {
     // 校验回复类型和id, id就可以区别
     const sessionId = message.sessionId
     if (source) {
       postMessage(<Window>source, {
         clientId: message.clientId,
         data: { result: true },
-        type: MessageType.handshakeReply,
+        type: MessageType.heartbeatReply,
         sessionId: sessionId
       }, this.domain)
     }
@@ -176,7 +179,7 @@ export default class MessageClient {
     console.warn(args)
   }
   private static initListener(client: MessageClient) {
-    client?.container?.addEventListener('message', (event: MessageEvent<Message>) => {
+    client?.container?.addEventListener('message', (event: MessageEvent) => {
       if (!checkOriginEq(client.domain, event.origin)){
         MessageClient.warn('消息来源的origin与当前domain不一致, 消息被丢弃')
         return;
@@ -186,10 +189,11 @@ export default class MessageClient {
       const message = resolveMessageData(event.data)
       console.log(message, 'message')
       switch (message.type) {
-        case MessageType.handshake:
-          client.handshakeReply(message, <Window>source)
+        case MessageType.heartbeat:
+          // 收到心跳请求，
+          client.heartbeatReply(message, <Window>source)
           break;
-        case MessageType.handshakeReply:
+        case MessageType.heartbeatReply:
           break;
         case MessageType.reply:
           break;
