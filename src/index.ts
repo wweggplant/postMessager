@@ -1,3 +1,3 @@
-import MessageClient from './postMessager'
+import PostMessager from './postMessager'
 
-export default MessageClient
+export default PostMessager

@@ -54,7 +54,7 @@ export class EventHub<E extends Emiter> {
      */
     public emit<N extends keyof E>(eventName: N, data: E[N] | null = null) {
         const listeners = this.cached[eventName]
-        listeners.forEach((listener) => {
+        listeners?.forEach((listener) => {
             listener.handler?.call(this, data)
         })
     }

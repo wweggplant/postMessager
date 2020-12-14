@@ -17,16 +17,26 @@ const sym  = Symbol("MessageClient");
 interface container extends Window {
   [sym]?: PostMessager
 }
-type MessageClientTarget = container
 let uid = 0;
 function IDgenerator(prefix: string) {
-  return `${prefix}${uid++}`;
+  return `${prefix}-${uid++}`;
 }
 const CONNECT_MAX_COUNT = 3
 enum SessionStatus  {
   close,
   keep,
   init
+}
+enum SessionMode {
+  passive,
+  initiative
+}
+interface Emiter extends Message{
+  [key: string]: any
+} 
+
+const warn = (...args: any[]) => {
+  console.warn(...args)
 }
 class Session {
   readonly id: string;
@@ -38,23 +48,37 @@ class Session {
   private status: SessionStatus = SessionStatus.init;
   private messageFun?: (event: MessageEvent) => void | undefined
   private interval: number = 0;
+  private promise!: Promise<SessionStatus>;
+  private mode: SessionMode;
   private sendData: (data: Message) => void 
-  private eventHubMap: Record<string, EventHub<any>> | undefined = {}
-  constructor(clientId: ClientId, origin: container, getTarget: getTarget, domain: string) {
+  private eventHub: EventHub<Emiter>
+  constructor(clientId: ClientId, origin: container, getTarget: getTarget, domain: string, mode: SessionMode = SessionMode.initiative) {
     this.id = IDgenerator('Session')
     this.origin = origin
     this.getTarget = getTarget
     this.clientId = clientId
     this.domain = domain
+    this.mode = mode
+    this.eventHub = new EventHub<Emiter>()
     this.sendData = (message) => {
       const target = this.checkAndGetTarget()
+      message.id = IDgenerator('Message');
       postMessage(target, message, this.domain)
     }
     const target = this.checkAndGetTarget()
-    if (target) {
-      target.addEventListener('load', () => {
-        this.doHeartbeatDetect()
+    if (target.document.readyState === 'loading') {
+      target.document.addEventListener('DOMContentLoaded', () => {
+        // 主动模式下, session不用心跳检测
+        if (target && this.mode === SessionMode.initiative) {
+          this.doHeartbeatDetect()
+        }
+        this.initListeners()
       })
+    } else {
+      if (target && this.mode === SessionMode.initiative) {
+        this.doHeartbeatDetect()
+      }
+      this.initListeners()
     }
   }
   checkAndGetTarget(): container{
@@ -75,16 +99,19 @@ class Session {
   */
   private doHeartbeatDetect() {
     const maxTime = 500
-    this.interval = window.setInterval(() => {
-      this.doOneHeartbeat()
+    clearInterval(this.interval)
+    const doInterval = () => {
+      this.promise = this.doOneHeartbeat()
       if (this.connetCount > CONNECT_MAX_COUNT) {
         this.status = SessionStatus.close
-        console.warn('连接失败')
+        warn('连接失败')
         clearInterval(this.interval)
       } else {
         this.connetCount++
       }
-    }, maxTime)
+    }
+    doInterval()
+    this.interval = window.setInterval(doInterval, maxTime)
   }
   /* 
     执行一次心跳操作, 创建一个新的Promise对象
@@ -94,6 +121,7 @@ class Session {
     return new Promise<SessionStatus>((resolve, reject) => {
         if (this.status === SessionStatus.close) {
           reject('连接失败')
+          this.eventHub.emit('link:error')
           return
         }
         this.sendData({
@@ -126,9 +154,6 @@ class Session {
         this.origin.addEventListener('message', this.messageFun)
       })
   }
-  destroy() {
-    this.eventHubMap = undefined
-  }
   send(data: Data) {
     const sendMessge = () => {
       this.sendData({
@@ -138,30 +163,41 @@ class Session {
         sessionId: this.id
       })
     }
-    this.status = SessionStatus.init
-    this.doOneHeartbeat().then(() => {
-      // 连接恢复,重新建立心跳探测
-      this.doHeartbeatDetect()
+    if (this.mode === SessionMode.passive) {
+      // 被动模式不负责session管理,直接发送
       sendMessge()
-    }).catch(() => {
-      console.error('发送失败')
+    }
+    // TODO 这里有待优化
+    setTimeout(() => {
+      if (this.status === SessionStatus.keep) {
+        sendMessge()
+      } else if (this.status === SessionStatus.close) {
+        this.status = SessionStatus.init
+        this.doOneHeartbeat().then(() => {
+          // 连接恢复,重新建立心跳探测
+          if (this.getTarget.call(null) && this.mode === SessionMode.initiative) {
+            this.doHeartbeatDetect()
+          }
+          sendMessge()
+        }).catch(() => {
+          console.error('发送失败')
+        })
+      }
+    }, 500)
+
+  }
+  // 回应请求
+  reply(handler: (data: Emiter) => Message) {
+    this.eventHub.on('request',(request: Message) => {
+      if (handler) {
+        const reply = handler(request)
+        reply.type = MessageType.reply
+        this.sendData(reply)
+      }
     })
   }
-}
-export default class PostMessager {
-  readonly id: ClientId = IDgenerator('MessageClient');
-  send() {}
-  container!: Options["container"];
-  domain!: Options["domain"];
-  // 连接, 需要主动调用
-  connect(getTarget: getTarget): Session{
-    if (typeof getTarget !== 'function') {
-      throw new Error('connect方法缺少getTarget参数')
-    }
-    return new Session(this.id, this.container, getTarget, this.domain)
-  }
   // 响应,自动调用
-  heartbeatReply(message: Message, source: MessageEventSource) {
+  private heartbeatReply(message: Message, source: MessageEventSource) {
     // 校验回复类型和id, id就可以区别
     const sessionId = message.sessionId
     if (source) {
@@ -173,24 +209,58 @@ export default class PostMessager {
       }, this.domain)
     }
   }
-  public static warn(...args: any[]) {
-    console.warn(args)
+  on(type: any, handler: (data: Emiter) => void) {
+    this.eventHub.on(type, handler)
   }
-  /* 
-    client监听，会自动响应所有的心跳请求
-  */
-  private static initReplyHeartbeat(client: PostMessager) {
-    client?.container?.addEventListener('message', (event: MessageEvent) => {
-      if (!checkOriginEq(client.domain!, event.origin)){
-        PostMessager.warn('消息来源的origin与当前domain不一致, 消息被丢弃')
+  // 回复消息
+  private initListeners() {
+    // message
+    this.origin.addEventListener('message', (event: MessageEvent) => {
+      if (!checkOriginEq(this.domain!, event.origin)){
+        warn('消息来源的origin与当前domain不一致, 消息被丢弃')
         return;
       }
       const source = event.source
       const message = resolveMessageData(event.data)
-      if(message.type === MessageType.heartbeat) {
-        client.heartbeatReply(message, <Window>source)
+      if (source !== this.getTarget.call(null)) {
+        warn('消息来源的target与当前source不一致')
+        return;
+      }
+      switch (message.type) {
+        case MessageType.reply:
+          this.eventHub.emit('reply', message)
+          break;
+        case MessageType.request:
+          this.eventHub.emit('request', message)
+          break;   
+        case MessageType.heartbeat:
+          this.heartbeatReply(message, <Window>source)
+          break;
+        default:
+          break;
       }
     }, false)
+  }
+  destroy() {
+    delete this.eventHub
+  }
+}
+export default class PostMessager {
+  readonly id: ClientId = IDgenerator('MessageClient');
+  container!: Options["container"];
+  domain!: Options["domain"];
+  // 连接, 需要主动调用
+  connect(getTarget: getTarget): Session{
+    if (typeof getTarget !== 'function') {
+      throw new Error('connect方法缺少getTarget参数')
+    }
+    return new Session(this.id, this.container, getTarget, this.domain)
+  }
+  listen(getTarget: getTarget) {
+    if (typeof getTarget !== 'function') {
+      throw new Error('connect方法缺少getTarget参数')
+    }
+    return new Session(this.id, this.container, getTarget, this.domain, SessionMode.passive)
   }
   constructor({ container, domain, name }: Options = { container: window, domain: location.href, name: ''}) {
     if (!container) {
@@ -210,7 +280,6 @@ export default class PostMessager {
     this.container = container
     this.container[sym] = this
     this.domain = resolveOrigin(domain)
-    PostMessager.initReplyHeartbeat(this)
   }
 }
 const resolveMessageData = (message: Message) => {
