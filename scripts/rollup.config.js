@@ -2,13 +2,13 @@ import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import babel from '@rollup/plugin-babel';
 import pkg from '../package.json';
-
+import injectProcessEnv from 'rollup-plugin-inject-process-env';
+import dotenv from 'dotenv';
 const extensions = [
   '.js', '.jsx', '.ts', '.tsx',
 ];
-
-const name = 'MessageClient';
-
+const name = 'PostMessager';
+dotenv.config()
 export default {
   input: 'src/index.ts',
 
@@ -28,6 +28,9 @@ export default {
       babelHelpers: 'bundled',
       include: ['src/**/*'],
     }),
+    injectProcessEnv({
+      NODE_ENV: process.env.NODE_ENV
+    })
   ],
 
   output: [{

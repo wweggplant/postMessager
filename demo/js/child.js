@@ -1,1 +1,1 @@
-const p = new MessageClient()
+const p = new PostMessager({name: 'child', container: window, domain: location.href })

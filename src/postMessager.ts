@@ -2,6 +2,7 @@
 import { resolveOrigin, postMessage, SupportPostMessage} from './util'
 import { EventHub } from './EventHub';
 interface Options {
+  name: string; // window的标志名字，用来区分不同的window
   container: container; // 默认当前的Window对象
   domain: string; // 默认当前的URL对象
 }
@@ -14,7 +15,7 @@ enum MessageType {
 }
 const sym  = Symbol("MessageClient");
 interface container extends Window {
-  [sym]?: MessageClient
+  [sym]?: PostMessager
 }
 type MessageClientTarget = container
 let uid = 0;
@@ -116,7 +117,9 @@ class Session {
               }
               resolve(this.status)
               this.connetCount = 0
-              console.log('连接成功')
+              if (process.env.NODE_ENV === 'development') {
+                console.log('连接状态:保持')
+              }
             }
           }
         }
@@ -145,13 +148,11 @@ class Session {
     })
   }
 }
-export default class MessageClient {
+export default class PostMessager {
   readonly id: ClientId = IDgenerator('MessageClient');
   send() {}
   container!: Options["container"];
   domain!: Options["domain"];
-  // sessionPool: Map<string, Session> = new Map()
-
   // 连接, 需要主动调用
   connect(getTarget: getTarget): Session{
     if (typeof getTarget !== 'function') {
@@ -172,45 +173,36 @@ export default class MessageClient {
       }, this.domain)
     }
   }
-  /**
-   * name
-   */
   public static warn(...args: any[]) {
     console.warn(args)
   }
-  private static initListener(client: MessageClient) {
+  /* 
+    client监听，会自动响应所有的心跳请求
+  */
+  private static initReplyHeartbeat(client: PostMessager) {
     client?.container?.addEventListener('message', (event: MessageEvent) => {
-      if (!checkOriginEq(client.domain, event.origin)){
-        MessageClient.warn('消息来源的origin与当前domain不一致, 消息被丢弃')
+      if (!checkOriginEq(client.domain!, event.origin)){
+        PostMessager.warn('消息来源的origin与当前domain不一致, 消息被丢弃')
         return;
       }
-      
       const source = event.source
       const message = resolveMessageData(event.data)
-      console.log(message, 'message')
-      switch (message.type) {
-        case MessageType.heartbeat:
-          // 收到心跳请求，
-          client.heartbeatReply(message, <Window>source)
-          break;
-        case MessageType.heartbeatReply:
-          break;
-        case MessageType.reply:
-          break;
-        case MessageType.request:
-          break;
-        default:
-          throw new Error(`未定义的消息类型:${message.type}`);
+      if(message.type === MessageType.heartbeat) {
+        client.heartbeatReply(message, <Window>source)
       }
     }, false)
   }
-  constructor({ container, domain }: Options = { container: window, domain: location.href}) {
+  constructor({ container, domain, name }: Options = { container: window, domain: location.href, name: ''}) {
     if (!container) {
       throw new Error('请传入container参数')
     }
     if (!SupportPostMessage(container)) {
       throw new Error('您的浏览器不支持postMessage')
     }
+    if (!name) {
+      throw new Error('请传入name参数')
+    }
+    this.id = IDgenerator(`MessageClient_${name}`);
     // 每个window只有一个client实例
     if (container[sym]) {
       return container[sym] as this
@@ -218,7 +210,7 @@ export default class MessageClient {
     this.container = container
     this.container[sym] = this
     this.domain = resolveOrigin(domain)
-    MessageClient.initListener(this)
+    PostMessager.initReplyHeartbeat(this)
   }
 }
 const resolveMessageData = (message: Message) => {
