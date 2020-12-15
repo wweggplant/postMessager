@@ -15,9 +15,40 @@
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
+        
+        <div id="app">
+            <h3>iframe B</h3>
+            <a-form layout="inline" :model="form" @submit="send" @submit.native.prevent>
+                <a-row>
+                    <a-col>
+                        <a-form-item label="普通消息">
+                            <a-input v-model:value="form.message" placeholder="请输入给iframe B发送的消息"></a-input>
+                        </a-form-item>
+                        <a-form-item>
+                            <a-button
+                                    type="primary"
+                                    html-type="submit"
+                                    :disabled="form.message === ''"
+                            >
+                                发送
+                            </a-button>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </a-form>
+            <a-row>
+                <a-col>来自iframe A的消息</a-col>
+            </a-row>
+            <a-row>
+                <a-textarea readonly placeholder="基本类型" type="textarea" v-model:value="messageFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
+            </a-row>
+            <a-row style="margin-top:10px">
+                <a-textarea readonly  placeholder="对象类型" type="textarea" v-model:value="dataFromOrther" :autosize="{minRows: 4, maxRows: 6}"></a-textarea>
+            </a-row>
+        </div>
         <script defer src="../../dist/postMessager.iife.js"></script>
-        <!-- <script defer src="https://cdn.bootcdn.net/ajax/libs/vue/3.0.2/vue.global.prod.js"></script> -->
-        <!-- <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-rc.1/antd.min.js"></script> -->
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/vue/3.0.2/vue.global.prod.js"></script>
+        <script defer src="https://cdn.bootcdn.net/ajax/libs/ant-design-vue/2.0.0-rc.1/antd.min.js"></script>
         <script defer src="../js/child.js"></script>
     </body>
 </html>
