@@ -14,7 +14,6 @@ session.reply(function(message) {
 let p
 let session
 let session2
-let child
 const ref = Vue.ref
 let app = Vue.createApp({
   setup() {
@@ -35,14 +34,12 @@ let app = Vue.createApp({
     const list = [{ name: 'foo', age: 11}, { name: 'foo2', age: 12}]
     const obj1 = { name: 'foo', age: 11}
     let data = ref([obj1, list])
-    let opener =ref(null)
     const openNewWin = (page) => {
-      opener.value = window.open(page,"_blank","toolbar=yes, location=yes, directories=no, status=no, menubar=yes, scrollbars=yes, resizable=no, copyhistory=yes, width=400, height=400");
-      session2 = p.connect(() => opener.value)
+      const opener = window.open(page,"_blank","toolbar=yes, location=yes, directories=no, status=no, menubar=yes, scrollbars=yes, resizable=no, copyhistory=yes, width=400, height=400");
+      session2 = p.connect(() => opener)
     }
     return {
       data,
-      opener,
       messageFromOrther,
       openNewWin
     }
@@ -58,7 +55,7 @@ let app = Vue.createApp({
       rules: {
         newWinMessage: [
           { validator: (rule, value, callback) => {
-            if (!child) {
+            if (!session2) {
               return Promise.reject('请先点击「打开新窗口」按钮');
             }
             return Promise.resolve();
@@ -79,8 +76,8 @@ let app = Vue.createApp({
       })
     },
     sendNewWinMessage() {
-      if (child){
-        child.targetEmit('some-event', { text: this.form.newWinMessage })
+      if (session2){
+        session2.send({ text: this.form.newWinMessage })
       }
     }
   }

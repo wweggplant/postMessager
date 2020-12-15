@@ -17,14 +17,19 @@
 <![endif]-->
 <h4>来自主页面的消息</h4>
 <p></p>
-<script src="../js/postMessager.iife.js"></script>
+<script src="../../dist/postMessager.iife.js"></script>
 <script>
-  let child = new PostMessager({
-    id: 'child1',
-  });
-  child.on('some-event', function(content, event) {
-    // console.log(content, event)
-    document.querySelector('p').innerText = content.text
+  const p = new PostMessager({
+    name: 'child1',
+    container: window,
+    domain: location.href
+  })
+  const session = p.listen(() => {
+    return window.opener
+  })
+  session.reply(function(message) {
+    document.querySelector('p').innerText = message.data.text
+    return message
   })
 </script>
 </body>
