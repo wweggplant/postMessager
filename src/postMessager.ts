@@ -34,12 +34,17 @@ enum SessionMode {
 interface Emiter extends Message{
   [key: string]: any
 } 
-
+const IS_DEV = process.env.NODE_ENV === 'development' ? true : false
 const warn = (...args: any[]) => {
   console.warn(...args)
 }
+const depWarn = (...args: any[]) => {
+  IS_DEV ? 
+  warn(...args): 
+  null
+}
 class Session {
-  readonly id: string;
+  id?: string;
   readonly origin: container;
   readonly getTarget: getTarget;
   readonly clientId: ClientId;
@@ -53,16 +58,21 @@ class Session {
   private sendData: (data: Message) => void 
   private eventHub: EventHub<Emiter>
   constructor(clientId: ClientId, origin: container, getTarget: getTarget, domain: string, mode: SessionMode = SessionMode.initiative) {
-    this.id = IDgenerator('Session')
+    this.mode = mode
+    if (this.mode === SessionMode.initiative) {
+      this.id = IDgenerator(`${clientId}-session`)
+    }
     this.origin = origin
     this.getTarget = getTarget
     this.clientId = clientId
     this.domain = domain
-    this.mode = mode
     this.eventHub = new EventHub<Emiter>()
     this.sendData = (message) => {
       const target = this.checkAndGetTarget()
-      message.id = IDgenerator('Message');
+      message.id = IDgenerator(`${this.id}-message`);
+      if (this.id) {
+        message.sessionId = this.id
+      }
       postMessage(target, message, this.domain)
     }
     const target = this.checkAndGetTarget()
@@ -101,7 +111,7 @@ class Session {
     const maxTime = 500
     clearInterval(this.interval)
     const doInterval = () => {
-      this.promise = this.doOneHeartbeat()
+      this.doOneHeartbeat()
       if (this.connetCount > CONNECT_MAX_COUNT) {
         this.status = SessionStatus.close
         warn('连接失败')
@@ -128,7 +138,7 @@ class Session {
           clientId: this.clientId,
           data: {},
           type: MessageType.heartbeat,
-          sessionId: this.id
+          id: this.id
         })
         if (this.messageFun) {
           this.origin.removeEventListener('message', this.messageFun)
@@ -145,7 +155,7 @@ class Session {
               }
               resolve(this.status)
               this.connetCount = 0
-              if (process.env.NODE_ENV === 'development') {
+              if (IS_DEV) {
                 console.log('连接状态:保持')
               }
             }
@@ -160,7 +170,7 @@ class Session {
         clientId: this.clientId,
         data,
         type: MessageType.request,
-        sessionId: this.id
+        id: this.id
       })
     }
     if (this.mode === SessionMode.passive) {
@@ -196,16 +206,19 @@ class Session {
       }
     })
   }
-  // 响应,自动调用
-  private heartbeatReply(message: Message, source: MessageEventSource) {
+  // 响应heartbeat请求,自动调用
+  private replyHeartbeat(message: Message, source: MessageEventSource) {
     // 校验回复类型和id, id就可以区别
-    const sessionId = message.sessionId
+    if (!this.id) {
+      this.id = message.sessionId // 被动方也有id了, 准备回复成功消息
+    }
     if (source) {
+      // 回复消息
       postMessage(<Window>source, {
         clientId: message.clientId,
         data: { result: true },
         type: MessageType.heartbeatReply,
-        sessionId: sessionId
+        sessionId: this.id
       }, this.domain)
     }
   }
@@ -226,6 +239,9 @@ class Session {
         warn('消息来源的target与当前source不一致')
         return;
       }
+      if (message.type !== MessageType.heartbeat &&  message.sessionId !== this.id) {
+        depWarn('session的id不一致')
+      }
       switch (message.type) {
         case MessageType.reply:
           this.eventHub.emit('reply', message)
@@ -234,7 +250,7 @@ class Session {
           this.eventHub.emit('request', message)
           break;   
         case MessageType.heartbeat:
-          this.heartbeatReply(message, <Window>source)
+          this.replyHeartbeat(message, <Window>source)
           break;
         default:
           break;
@@ -272,7 +288,7 @@ export default class PostMessager {
     if (!name) {
       throw new Error('请传入name参数')
     }
-    this.id = IDgenerator(`MessageClient_${name}`);
+    this.id = IDgenerator(`MessageClient-${name}`);
     // 每个window只有一个client实例
     if (container[sym]) {
       return container[sym] as this
