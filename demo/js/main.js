@@ -28,7 +28,7 @@ let app = Vue.createApp({
       })
       session = p.connect(() => document.querySelector('iframe').contentWindow)
       session.reply(function(message) {
-        messageFromOrther.value = content.text
+        messageFromOrther.value = message.data.text
         return message
       })
     })
@@ -68,11 +68,14 @@ let app = Vue.createApp({
     }
   },
   methods: {
-    send() {
-      const data = this.data
+    sendMessage() {
       session.send({
-        message: this.form.message,
-        data:  getPlainObject(data[this.form.data])
+        message: this.form.message
+      })
+    },
+    send() {
+      session.send({
+        data:  getPlainObject(this.data[this.form.data])
       })
     },
     sendNewWinMessage() {

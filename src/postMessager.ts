@@ -53,7 +53,6 @@ class Session {
   private status: SessionStatus = SessionStatus.init;
   private messageFun?: (event: MessageEvent) => void | undefined
   private interval: number = 0;
-  private promise!: Promise<SessionStatus>;
   private mode: SessionMode;
   private sendData: (data: Message) => void 
   private eventHub: EventHub<Emiter>

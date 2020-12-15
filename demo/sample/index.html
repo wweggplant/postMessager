@@ -23,7 +23,7 @@
         <div id="app">
             <h2>跨iframe通讯demo</h2>
             <h3>iframe A</h3>
-            <a-form layout="inline" :model="form" @submit="send" @submit.native.prevent>
+            <a-form layout="inline" :model="form" @submit="sendMessage" @submit.native.prevent>
                 <a-row>
                     <a-col>
                         <a-form-item label="普通消息">
@@ -40,6 +40,8 @@
                         </a-form-item>
                     </a-col>
                 </a-row>
+            </a-form>
+            <a-form layout="inline" :model="form" @submit="send" @submit.native.prevent>
                 <a-row>
                     <a-col>
                         <a-form-item label="传送数据">
